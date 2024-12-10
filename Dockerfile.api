@@ -15,24 +15,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install pip
 RUN python3.12 -m pip install --upgrade pip
 
-# Copy requirements and install dependencies
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy download folder
-COPY data/downloads /app/data/downloads
-
 # Copy the API code
+COPY data/downloads /app/data/downloads
 COPY src/api /app/src/api
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r /app/src/api/requirements.txt
 
 # Expose Flask default port
 EXPOSE 5000
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
-ENV CELERY_BROKER_URL=redis://redis:6379/0
-ENV RESULT_BACKEND=redis://redis:6379/0
-ENV BROKER_CONNECTION_RETRY_ON_STARTUP=True
 
-# Start the Flask server
-CMD ["python3.12", "-m", "src.api.app"]
+# Start both Flask and Celery
+CMD ["bash", "-c", "python3.12 -m src.api.app & celery -A src.api.tasks.tasks worker --loglevel=info --pool=solo"]

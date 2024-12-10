@@ -1,5 +1,4 @@
 import os
-import shutil
 from src.api.utils.files_utils import downloads_folder
 
 def reset_process(request_id):

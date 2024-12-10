@@ -50,8 +50,12 @@ def crawl_task(self, blog_url, years, populate_between, context):
 
             for year in years:
                 if not check_if_year_exists(blog_url, year):
+                    current_step += 12  # Increment by 12 for the skipped year
+                    current_progress = (current_step / total_steps) * 100
+                    socketio.emit('progress', {'progress': current_progress, 'requestId': request_id_var.get()})
                     socketio.emit('log', {'log': f"No content found for year {year}", 'requestId': request_id_var.get()})
                     continue
+
 
                 year_data = {"year": year, "months": []}
                 socketio.emit('log', {'log': f"Processing year {year}", 'requestId': request_id_var.get()})
@@ -59,6 +63,9 @@ def crawl_task(self, blog_url, years, populate_between, context):
                 for month in range(1, 13):
 
                     if not check_if_month_exists(blog_url, year, month):
+                        current_step += 1  # Increment for the skipped month
+                        current_progress = (current_step / total_steps) * 100
+                        socketio.emit('progress', {'progress': current_progress, 'requestId': request_id_var.get()})
                         socketio.emit('log', {'log': f"No content found for {year}/{month:02}", 'requestId': request_id_var.get()})
                         continue
 
@@ -81,6 +88,11 @@ def crawl_task(self, blog_url, years, populate_between, context):
                 if year_data["months"]:
                     all_content.append(year_data)
                     socketio.emit('log', {'log': f"Completed year {year}", 'requestId': request_id_var.get()})
+            
+            if not all_content:
+                socketio.emit('log', {'log': "No content found", 'requestId': request_id_var.get()})
+                # throw error
+                raise Exception("No content found")
 
             # Create a folder for the user based on the request_id (UUID)
             user_folder = os.path.join(downloads_folder, request_id_var.get())
@@ -102,14 +114,13 @@ def crawl_task(self, blog_url, years, populate_between, context):
     
             socketio.emit('log', {'log': "Crawling complete", 'requestId': request_id_var.get()})
             
-            socketio.emit('finished', {'requestId': request_id_var.get()})
-
+            socketio.emit('state', { 'state': "finished_ok", 'requestId': request_id_var.get()})
         except Exception as e:
-            socketio.emit('log', {'log': f"Error: {str(e)}", 'requestId': request_id_var.get()})
+            socketio.emit('state', { 'state': "failed", 'requestId': request_id_var.get()})
         finally:
             # using zipfile
             zip_files(user_folder, os.path.join(downloads_folder, request_id_var.get() + "_blog_data.zip"))
             # remove the folder
             shutil.rmtree(user_folder)
             socketio.emit('progress', {'progress': 100, 'requestId': request_id_var.get()})
-            socketio.emit('finished', {'requestId': request_id_var.get()})
+            socketio.emit('state', { 'state': "finished_ok", 'requestId': request_id_var.get()})

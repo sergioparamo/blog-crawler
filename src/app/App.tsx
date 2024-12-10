@@ -27,35 +27,48 @@ function App() {
   const [error, setError] = useState("");
   const [logs, setLogs] = useState<string[]>([]);
   const [requestId, setrequestId] = useState<string>("");
+  const [taskId, setTaskId] = useState<string>("");
   
 
   useEffect(() => {
-    socket.on('progress', (data) => {
-      if (data.requestId === requestId) {
-        setProgress(data.progress);
-      }
-    });
-  
-    socket.on('log', (data) => {
-      if (data.requestId === requestId) {
-        setLogs((prevLogs) => [...prevLogs, data.log]);
-      }
-    });
-  
-    socket.on('finished', (data) => {
-      if (data.requestId === requestId) {
-        setIsProcessing(false);
-        setStatus('finished');
-      }
-    });
-  
-    return () => {
-      socket.off('progress');
-      socket.off('log');
-      socket.off('finished');
-    };
-  }, [isProcessing, requestId]);
-  
+    if (requestId) {
+      // Join the room once requestId is available
+      console.log(`Joining room: ${requestId}`);
+      socket.emit('join_room', { requestId });
+
+      socket.on('progress', (data) => {
+        if (data.requestId === requestId) {
+          setProgress(data.progress);
+        }
+      });
+
+      socket.on('log', (data) => {
+        if (data.requestId === requestId) {
+          setLogs((prevLogs) => [...prevLogs, data.log]);
+        }
+      });
+
+      socket.on('state', (data) => {
+        if (data.requestId === requestId) {
+          setIsProcessing(false);
+          if (data.state === 'finished_ok') {
+            setStatus('success');
+          }
+          if (data.error) {
+            setError(data.state);
+          }
+        }
+      });
+
+      return () => {
+        // Leave the room when the component is unmounted or requestId changes
+        socket.emit('leave_room', { requestId });
+        socket.off('progress');
+        socket.off('log');
+        socket.off('state');
+      };
+    }
+  }, [isProcessing, requestId]);  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,23 +87,25 @@ function App() {
         proxies,
       });
       const requestId = response.data.requestId;
+      const taskId = response.data.taskId;
       setrequestId(requestId);
+      setTaskId(taskId);
       setStatus("🔄 Processing...");
     } catch (err: any) {
       console.log(err);
-      if (err.response.data.message === "JSON file is too large to generate PDFs") {
-        alert("❌ JSON file is too large to generate PDFs");
-      } else {
-        alert("❌ Error occurred during processing: " + err.response.data.message);
-      }
       setIsProcessing(false);
+      alert("❌ Error occurred during processing: " + err.response.data.message);
     }
   };
 
   const handleStop = async () => {
     try {
-      await axios.post(`http://127.0.0.1:5000/api/stop/${requestId}`);
       setStatus("⏹️ Stopping process...");
+      const response = await axios.post(`http://127.0.0.1:5000/api/stop/${taskId}`);
+      if (response.status === 200) {
+        setStatus("⏹️ Process stopped");
+        setIsProcessing(false);
+      }
     } catch (err) {
       setError("Failed to stop process");
     }
@@ -98,9 +113,7 @@ function App() {
 
   const handleReset = async () => {
     try {
-      await axios.post(`http://127.0.0.1:5000/api/reset/${requestId}`, {
-        requestId,
-      });
+      await axios.post(`http://127.0.0.1:5000/api/reset/${requestId}`);
       setStatus("");
       setProgress(0);
       setError("");
@@ -221,7 +234,7 @@ function App() {
             </div>
           )}
 
-          {status === "finished" && (
+          {status === "success" && (
           <div className="mt-6 flex justify-center space-x-4">
             <button
               onClick={() => handleDownload()}

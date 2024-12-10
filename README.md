@@ -19,11 +19,15 @@ The project architecture follows a **microservices-inspired** approach:
 
 ## Features
 
-- Crawl blogs by specifying years or ranges.
-- Generate JSON and PDF files of blog data.
-- Real-time logs and progress updates.
-- Downloadable ZIP files containing results.
-- Reset and clean-up functionality.
+- **Dynamic Blog Crawling**: Crawl any blog by providing its base URL and the years to scrape.
+- **Content Parsing**: Extracts post titles, dates, and content (including images).
+- **PDF Generation**: Creates beautifully formatted PDFs for each year's posts.
+- **Content Archival**: Saves scraped data in a JSON file for reuse.
+- **Queue Processing**: Uses Celery for long-running tasks, backed by RabbitMQ.
+- **Real-time Updates**: Uses Socket.IO for real-time progress updates.
+- **Downloadable Results**: Provides a downloadable ZIP file containing the generated PDFs.
+- **Reset and Clean-up**: Allows users to reset the crawler and clear the data.
+- **Stop Crawling**: Provides a stop button to interrupt ongoing crawls.
 
 ---
 
@@ -81,7 +85,72 @@ The project architecture follows a **microservices-inspired** approach:
 - Node.js 22+
 - Docker
 
-## Installation
+## Blog format
+
+### URL Format sample:
+
+The blog posts follow a consistent URL format across all years. Each URL is structured hierarchically to organize posts by year, month, pagination (if applicable), and individual post titles. Here's the breakdown:
+
+- **Base URL**: The base URL of the blog, e.g., `https://www.test.com/`.
+- **Year**: The year of the blog post, e.g., `2024`.
+- **Month**: The month of the blog post, e.g., `12`.
+- **Pagination**: Optional pagination for multiple posts in a single month, e.g., `page/2/`.
+- **Title**: The title of the blog post, e.g., `post-title`.
+
+For example, the URL for a blog post on December 20, 2024, is `https://www.test.com/2024/12/post-title`.
+
+Or in the case of pagination, `https://www.test.com/2024/12/page/2/post-title`.
+
+### HTML Format sample:
+
+The format of the blog posts is expected to be the same. The script will scrape the blog page for each year and month and extract the necessary information for each post (title, date, and content).
+
+```html
+<article class="post">
+  <header class="entry-header">
+    <h1 class="entry-title">Blog Post Title</h1>
+    <div class="entry-meta">
+      <span class="screen-reader-text">Posted on</span>
+      <a href="https://www.test.com/2024/12/post-title" rel="bookmark"
+        ><time
+          class="entry-date published updated"
+          datetime="2024-12-20T12:44:12+09:00"
+          >December 20, 2024</time
+        ></a
+      >
+    </div>
+  </header>
+  <div class="entry-content">
+    <p>This is the content of the blog post...</p>
+  </div>
+</article>
+```
+
+## Format breakdown:
+
+- `<article class="post">`: The main container for the blog post.
+- `<header class="entry-header">`: The header section containing the post title and date.
+- `<div class="entry-content">`: The content of the blog post.
+
+## Running the Project
+
+### Docker
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/sergioparamo/blog-crawler.git
+   cd blog-crawler
+   ```
+
+2. Build and run the Docker containers:
+   ```bash
+   docker-compose build
+   docker-compose up -d
+   ```
+
+3. Access the frontend at http://localhost:80
+
+4. Access the backend API at http://localhost:5000
 
 ### Backend
 
@@ -109,6 +178,9 @@ The project architecture follows a **microservices-inspired** approach:
    ```
 
 5. Create a RabbitMQ virtual host named "test". See this link for more info: https://www.rabbitmq.com/docs/vhosts
+   ```bash
+   curl -u username:password -X PUT http://localhost:15672/api/vhosts/test
+   ```
 
 6. Run the Flask API:
    ```bash
@@ -117,7 +189,7 @@ The project architecture follows a **microservices-inspired** approach:
 
 6. Start Celery Worker:
    ```bash
-   celery -A src.api.tasks.tasks worker --loglevel=info
+   celery -A src.api.tasks.tasks worker --loglevel=info --pool=eventlet
    ```
 
 ### Frontend
@@ -152,5 +224,8 @@ The project architecture follows a **microservices-inspired** approach:
 
 ### `/api/reset/<request_id>` (POST)
 - **Description**: Resets the process for the given request ID and removes the user-specific file.
+
+### `/api/stop/<task_id>` (POST)
+- **Description**: Stops the Celery task with the given task ID.
 
 ---
