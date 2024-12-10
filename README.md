@@ -75,6 +75,12 @@ The project architecture follows a **microservices-inspired** approach:
 
 ---
 
+## Pre-requisites
+
+- Python 3.12+
+- Node.js 22+
+- Docker
+
 ## Installation
 
 ### Backend
@@ -102,7 +108,9 @@ The project architecture follows a **microservices-inspired** approach:
    docker run -d --rm --name rabbitmq -p 5672:5672 -p 15672:15672 rabbitmq:management
    ```
 
-5. Run the Flask API:
+5. Create a RabbitMQ virtual host named "test". See this link for more info: https://www.rabbitmq.com/docs/vhosts
+
+6. Run the Flask API:
    ```bash
    python3 -m src.api.app
    ```
