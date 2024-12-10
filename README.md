@@ -1,5 +1,5 @@
 
-# Blog Crawler Project
+# 📚🔎 Blog Crawler Project
 
 ## Overview
 
