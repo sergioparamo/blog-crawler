@@ -144,7 +144,7 @@ function App() {
               <h1 className="text-2xl font-bold text-gray-900">Blog Crawler</h1>
             </div>
             <a
-              href="https://github.com/sergioparamo/blog-scraping-ui"
+              href="https://github.com/sergioparamo/blog-crawler"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-500 hover:text-gray-700"
