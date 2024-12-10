@@ -70,8 +70,8 @@ The project architecture follows a **microservices-inspired** approach:
 ### Downloads Folder
 
 - **`/data/downloads`**: Directory where user-specific folders are created for results.
-   - **`<user_id>`**: User-specific folder.
-      - **`blog_data.zip`**: Generated data with JSON and PDF files.
+   - **`<user_id>`**: User-specific folder for temporary files.
+   - **`<user_id>_blog_data.zip`**: Generated data with JSON and PDF files.
 
 ---
 
